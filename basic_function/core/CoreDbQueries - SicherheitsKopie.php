@@ -177,39 +177,14 @@ class CoreDbQueries
 
         return $this->iudLines($sql, $values);
     }
-    public function getLastActivityFromAltCard($driverCardId,$startDate)
-    {
-        $dbTable = "difa_drivercard_activities.driver_activities_";
-        $dbTable .= str_pad($driverCardId, 8, "0", STR_PAD_LEFT);
-
-        $sql= "SELECT * FROM $dbTable WHERE start >= '$startDate'";
-
-        return $this->querySelect($sql);
-    }
 
     public function getDriverActivities($driverCardIds, $startDate, $endDate = null)
     {
         $filter = " WHERE `start` >= '".$startDate."'";
         if (!is_null($endDate)) {
-            $filter .= " AND `start` <= '".$endDate."'";
+            $filter .= " AND `start` <= '".$endDate." 23:59:59'";
         }
-        $driverCardsNew = array();
-        if (count($driverCardIds) > 1) 
-        {
-            for ($i = 0; $i < count($driverCardIds); $i++)
-            {
-                if($this->getLastActivityFromAltCard($driverCardIds[$i],$startDate) != null)
-                {
 
-                    //echo("Entfernen von Karten."\n");
-                    $driverCardsNew[] = $driverCardIds[$i];
-                    
-                }
-            }
-        }
-    
-        $driverCardIds = $driverCardsNew;
-        
         if (count($driverCardIds) > 1) {
             for ($i = 0; $i < count($driverCardIds); $i++) {
                 if ($i == 0) {
@@ -315,7 +290,7 @@ class CoreDbQueries
     {
         $filter = " WHERE date_add(CONVERT_TZ(`start`,'UTC','CET'), INTERVAL (duration/60) MINUTE) >= '".$startDate."'";
         if (!is_null($endDate)) {
-            $filter .= " AND `start` <= '".$endDate."'";
+            $filter .= " AND `start` <= '".$endDate." 23:59:59'";
         }
 
         if (count($driverCardIds) > 1) {
@@ -1071,14 +1046,15 @@ class CoreDbQueries
         return $this->querySelect($sql);
     }
 
-    public function getHolydays($dateStart, $dateEnd)
+    public function getHolydays($dateStart, $dateEnd, $regions)
     {
-        $sql = "SELECT DATE_FORMAT(dd.day_date, '%Y-%m-%d') as 'date', pd.factor, dd.day_idx, pd.regions_idx
+        $sql = "SELECT DATE_FORMAT(dd.day_date, '%Y-%m-%d') as 'date', pd.factor
                 FROM difa_driver_payments.payment_days_dates dd 
                 LEFT JOIN difa_driver_payments.payment_days pd
                     ON dd.day_idx = pd.idx
                 WHERE dd.day_date > '$dateStart'
-                    AND dd.day_date < '$dateEnd'";
+                    AND dd.day_date < '$dateEnd'
+                    AND pd.regions_idx in ($regions)";
 
         return $this->querySelect($sql);
     }
@@ -1104,13 +1080,11 @@ class CoreDbQueries
         $sql = "DELETE FROM difa_driver_violation.driver_violations
                 WHERE driver_idx = $driverId
                 AND date_start >= '$startDate'
-                AND deleted = 0
-                AND (violation_idx = 5 or violation_idx = 8 or violation_idx = 9
-                violation_idx = 10 or violation_idx = 11  or violation_idx = 7 or violation_idx = 6 or violation_idx = 1 or violation_idx = 2
-               or violation_idx = 15 or violation_idx = 16)";
+                AND deleted = 0";
 
         return $this->iuLines($sql);
     }
+
     public function getLandSigns($driverCardIds, $time)
     {
         if (count($driverCardIds) > 1) {
@@ -1652,11 +1626,5 @@ class CoreDbQueries
 
         //var_dump($sql);
         return $this->iuLines($sql);
-    }
-   public function getClientControlDepartures($clientId)
-    {
-        $sql = "SELECT * FROM difa_resources.client_departure_control WHERE client_idx = $clientId;";
-
-        return $this->querySelect($sql);
     }
 }

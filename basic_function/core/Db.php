@@ -28,8 +28,7 @@ abstract class Db
             }
             elseif ($company == 1) 
             {
-                // $json_config = file_get_contents('C:/vici/basic_config/transics_mariadb.json');
-                $json_config = file_get_contents('C:/vici/basic_config/pcs_mariadb.json');
+                $json_config = file_get_contents('C:/vici/basic_config/transics_mariadb.json');
                 $db_config = json_decode($json_config, true);
             }
             $db = new \PDO("mysql:".$db_config['db']."=PHP;host=".$db_config['host'].";port=".$db_config['port'].";charset=".$db_config['charset'],$db_config['username'],$db_config['password']);

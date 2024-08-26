@@ -44,7 +44,7 @@ class VCalc
     public function run($sDate)
     {
         $start = microtime(true);
-        echo "function run starts\n";
+
         $startDate = new \DateTime($sDate);
         $lastShift = $this->dbQuery->getLastShiftV($this->driver['idx'], $startDate->modify('-2 months')->format('Y-m-d'));
         if (!is_null($lastShift['dateStart']))
@@ -56,7 +56,6 @@ class VCalc
         
         $timeElapsed = microtime(true) - $start;
         echo (YELLOW . $timeElapsed . RESET . "\n" );
-        echo "function run returns\n";
         return;
     }
 
@@ -71,7 +70,6 @@ class VCalc
      */ 
     private function startCalculations($driver, $startDate)
     {
-        echo "function startCalculations starts\n";
         print (YELLOW. 'calculating violations... ' . RESET . "\n");
         $driverCardIds = explode(',', $driver['dtco_driver_idx']);
         $workingTimes = $this->dbQuery->getWorkingTimes($driver['idx'], $startDate);
@@ -81,21 +79,21 @@ class VCalc
             $violations = array();
             $dwtViolations = array();
             $lsViolations = $this->calculateLandSignViolation($driver, $driverCardIds, $workingTimes);
-           //$aawaViolations = $this->calculateAbsentAdditionAndWrongActivity($driver, $driverCardIds, $startDate);
-           //$dcViolations = $this->calculateDepartureControl($driver, $driverCardIds, $workingTimes);
-            //$wdtViolations = $this->calculateWeeklyDrivingTime($driver, $driverCardIds, $startDate);
+            $aawaViolations = $this->calculateAbsentAdditionAndWrongActivity($driver, $driverCardIds, $startDate);
+            $dcViolations = $this->calculateDepartureControl($driver, $driverCardIds, $workingTimes);
+            $wdtViolations = $this->calculateWeeklyDrivingTime($driver, $driverCardIds, $startDate);
             $wrtViolations = $this->calculateWeeklyRestTimes($driver['idx'], $driverCardIds, $startDate);
             $dViolations = $this->calculateDailyViolations($driver['idx'], $driverCardIds, $startDate);
             $dbViolations = $this->calculateDailyBreaksViolations($driver['idx'], $driverCardIds, $workingTimes);
-            // $wlwtViolations = $this->calculateWLWTViolations($driver['idx'], $driverCardIds, $workingTimes);
-            // $wldbViolations = $this->calculateWLDailyBreaksViolations($driver['idx'], $driverCardIds, $workingTimes);
+            $wlwtViolations = $this->calculateWLWTViolations($driver['idx'], $driverCardIds, $workingTimes);
+            $wldbViolations = $this->calculateWLDailyBreaksViolations($driver['idx'], $driverCardIds, $workingTimes);
             if (164 == $driver['client_idx'])
             {
                 $dwtViolations = $this->calculateDailyWTViolations($driver['idx'], $driverCardIds, $workingTimes);
             }
             //var_dump($dbViolations);
-            $violations = array_merge($lsViolations,/* $aawaViolations, $dcViolations, $wdtViolations,*/ $wrtViolations,
-                                        $dViolations, $dbViolations, /*$wlwtViolations, $wldbViolations,*/ $dwtViolations);
+            $violations = array_merge($lsViolations, $aawaViolations, $dcViolations, $wdtViolations, $wrtViolations,
+                                        $dViolations, $dbViolations, $wlwtViolations, $wldbViolations, $dwtViolations);
             //var_dump($wdtViolations);
             $this->dbQuery->deleteViolations($driver['idx'], $startDate);
             $violationValues = '';
@@ -112,14 +110,11 @@ class VCalc
             //print rtrim($violationValues, ', ');
             if (count($violations) > 0) $this->dbQuery->saveViolations(rtrim($violationValues, ', '));
         }
-        
-        echo "function startCalculations returns\n";
         return;
     }
 
     public function calculateLandSignViolation($driver, $driverCardIds, $workingTimes)
     {
-        echo "function calculateLandSignViolation starts\n" ;
         print('Calculating LSV for driver #'.$driver['idx']."\n");
         $violations = array();
         //var_dump($driverCardIds);
@@ -156,7 +151,6 @@ class VCalc
                 }
             }
         }
-        print("function calculateLandSignViolation returns\n");
         return $violations;
     }
 
@@ -164,7 +158,7 @@ class VCalc
     {
         $violations = array();
         $activities = null;
-        echo"function calculateAbsentAdditionAndWrongActivity starts\n";
+
         print('Calculating AA and WS for driver #'.$driver['idx']."\n");
 
         $activities = $this->driverCtrl->getDriverActivities($driverCardIds, $startDate);
@@ -195,90 +189,50 @@ class VCalc
                 }
             }
         }
-        echo"calculateAbsentAdditionAndWrongActivity returns\n";
+
         return $violations;
     }
 
     public function calculateDepartureControl($driver, $driverCardIds, $workingTimes)
     {
-
-	$departureControl = $this->dbQuery->getClientControlDepartures($driver['client_idx']);
-
-    echo"esta es la lista ".$departureControl;
-    
-    //echo"DepartureControl 0: "."$departureControl[0]";
- 	//echo"DepartureControl 1: "."$departureControl[1]";
-        
-
         $violations = array();
-        echo"function calculateDepartureControl starts\n";
+
         foreach ($workingTimes as $shift)
         {
- 
             $activities = $this->driverCtrl->getDriverActivities($driverCardIds, $shift['payment_start_db'], true, $shift['payment_end_db']);
 
-            foreach($departureControl as $departure){
-                if($shift['payment_start_db'] >=  $departure["date_from"] && $shift['payment_end_db'] <= $departure["date_to"] )
-                {
-                   
-                    $control = $departure["work_time"];
-                    $controlfahrt = $departure["drive_time"];  
-
-                    echo"Registro antiguo: ".$control;
-                    echo"Registro antiguo: ".$controlfahrt;
-                }
-                else if($shift['payment_start_db'] >=  $departure["date_from"] && $departure["date_to"] == null )
-                {
-                    $control = $departure["work_time"];
-                    $controlfahrt = $departure["drive_time"];  
-
-                    echo"Registro nuevo: ".$control;
-                    echo"Registro nuevo: ".$controlfahrt;
-                }
-            }
-            
             if (!is_null($activities) && count($activities) > 0)
             {
                 $violation = true;
                 $driveBlock = false;
                 $duration = 0;
-                $control = 5;
-                $controlfahrt = 15;
-
-                echo"Lo que se usa actualmente: ".$control;
-                echo"Lo que se usa actualmente: ".$controlfahrt;
-   		        //$control = $departureControl[0];
-                //$controlfahrt = $departureControl[1];
-
+                //die nach Zeit sortierten Aktivitäten werden einzeln betrachtet
                 foreach ($activities as $activity)
                 {
                     if ($activity['activity'] == 2) $duration += $activity['duration'];
-                    if (($driveBlock == false && $violation == true && $duration >= $control) || ($driveBlock == false && $violation == true && $activity['activity'] == 1 && $activity['team'] == 1))
+                    if (($driveBlock == false && $violation == true && $duration >= 5) || ($driveBlock == false && $violation == true && $activity['activity'] == 1 && $activity['team'] == 1))
                     {
                         $violation = false;
                     }
                     
-                    if ($driveBlock == false && $violation == true && $activity['activity'] == 3 && $activity['duration'] >= $controlfahrt)
+                    if ($driveBlock == false && $violation == true && $activity['activity'] == 3 && $activity['duration'] >= 15)
                     {
                         $driveBlock = true;
-                        $violationDuration = $control - $duration;
+                        $violationDuration = 5 - $duration;
                         $violation = array('driver_idx' => $driver['idx'], 'violation_idx' => 14, 'date_start' => $activity['date_start_utc'],
                                 'date_end' => null, 'duration' => $violationDuration, 'group' => null, 'addition' => null, 'fine' => 50);
                         array_push($violations, $violation);
                         //var_dump($violation);
                     }
                 }
-            }else{echo "no activities???"; }
-
+            }
         }
-        echo"function calculateDepartureControl returns\n";
+
         return $violations;
     }
 
     public function calculateWeeklyDrivingTime($driver, $driverCardIds, $startDate)
     {
-        
-        echo "function calculateWeeklyDrivingTime starts\n";
         print('Calculating WDT for driver #'.$driver['idx']."\n");
        // var_dump($driverCardIds);
         $violations = array();
@@ -370,7 +324,7 @@ class VCalc
                     //var_dump($violation);
                 }
             }
-            if (($lastDrivingAll + $drivingAll) > 5400)
+            /*if (($lastDrivingAll + $drivingAll) > 5400)
             {
                 //calculate fine
                 $violationDuration = $lastDrivingAll + $drivingAll - 5400;
@@ -407,20 +361,19 @@ class VCalc
 
                 $violation = array('driver_idx' => $driver['idx'], 'violation_idx' => 4, 'date_start' => $dwViolationStart->format('Y-m-d H:i:s'),
                             'date_end' => $lastDrivingActivity['date_end_utc'], 'duration' => $violationDuration, 'group' => $group, 'addition' => null, 'fine'=> $fine);
-                array_push($violations, $violation);
+                array_push($violations, $violation);*/
                 //var_dump($violation);
             } 
             $lastDrivingAll = $drivingAll;
             $lastMonday = $monday;
             $monday = $nextMonday;
         }
-        echo "function calculateWeeklyDrivingTime returns\n";
+
         return $violations;
     }
 
     public function calculateWeeklyRestTimes($driverId, $driverCardIds, $startDate)
     {
-        echo "function calculateWeeklyRestTimes starts\n";
         $lastRestTime = null;
         $violations = array();
         $restTimes = null;
@@ -653,16 +606,12 @@ class VCalc
         //var_dump('ALL VIOLATIONS');
         //var_dump($violations);
         //if (count($violations) > 0) $this->model->saveViolations($violations);
-
-        echo "function calculateWeeklyRestTimes returns\n";
         return $violations;
     }
 
     private function calculateViolationsAndChooseWRT($shortenedWRTs, $lastRestTime, $restTime, $driverId)
     {
-        echo "function calculateViolationsAndChooseWRT starts\n";
         $suitableWRT = null;
-
         $shortenedViolation = false;
         $violations = array();
         foreach ($shortenedWRTs as $key => $shortenedWRT)
@@ -951,13 +900,12 @@ class VCalc
                 }
             }
         }
-        echo "function calculateViolationsAndChooseWRT returns\n";
+
         return $violations;
     }
 
     private function checkShortenedWRT($shortenedWRT, $lastRestTime, $restTime, $driverId)
     {
-        echo "function checkShortenedWRT starts\n";
         $shortenedWRT['timestamp_start'] = strtotime($shortenedWRT['payment_end']);
         if (!is_null($shortenedWRT['time_end']))
             $shortenedWRT['timestamp_end'] = strtotime($shortenedWRT['time_end']);
@@ -1010,13 +958,11 @@ class VCalc
                         'date_end' => $restTime['date_start_utc'], 'duration' => $violationDuration, 'group' => $group, 'addition' => null, 'fine'=> $fine);
             array_push($violations, $violation);
         }
-        echo "function checkShortenedWRT returns\n";
         return $violations;
     }
 
     private function chooseShortenedWRT($driverId, $weeklyRestTimes, $startDate, $endDate)
     {
-        echo "function chooseShortenedWRT starts\n";
         $violations = array();
         //var_dump('check For Daily Violations');
         //var_dump($weeklyRestTimes);
@@ -1046,14 +992,13 @@ class VCalc
             }
         }
         //var_dump($bestChoise);
-        echo "function chooseShortenedWRT starts\n";
         return $bestChoise;
     }
 
     private function checkForDailyViolations($driverId, $startDate, $endDate)
     {
         $fines = 0;
-        echo "function checkForDailyViolations starts\n";
+
         $ddtViolations = $this->calculateDaylyDrivingTimeViolations($driverId, $startDate, $endDate);
         foreach ($ddtViolations as $violation)
         {
@@ -1066,16 +1011,13 @@ class VCalc
             //var_dump($violation);
             if ($violation['addition'] == '(11 Stunden)') $fines += $violation['fine'];
         }
-        echo "function checkForDailyViolations returns\n";
+
         return $fines;
     }
 
     public function calculateDailyViolations($driverId, $driverCardIds, $startDate)
     {
-        
-        echo "function calculateDailyViolations starts\n";
         $lastRestTime = null;
-
         $violations = array();
         $restTimes = null;
 
@@ -1101,13 +1043,12 @@ class VCalc
                 $startDate = $weeklyRestTime['payment_end'];
             }
         }
-        echo "function calculateDailyViolations returns\n";
+
         return $violations;
     }
 
     public function calculateDaylyDrivingTimeViolations($driverId, $startDate, $endDate, $driverCardIds = null)
     {
-        echo "function calculateDaylyDrivingTimeViolations starts\n";
         $violations = array();
         $activities = null;
         $workingTimes = $this->dbQuery->getWorkingTimes($driverId, $startDate, $endDate, 'duration_driving');
@@ -1263,13 +1204,12 @@ class VCalc
             }
         }
         //  if (!is_null($violations)) $this->model->saveViolations($violations);
-        echo "function calculateDaylyDrivingTimeViolations returns\n";
+
         return $violations; #json_encode('END');
     }
 
     public function calculateDaylyRestTimeViolations($driverId, $startDate, $endDate)
     {
-        echo "function calculateDaylyRestTimeViolations starts\n";
         $violations = array();
         $activities = null;
 
@@ -1495,14 +1435,13 @@ class VCalc
                 array_push($violations, $violation);
             }
         }
-        //  if (!is_null($violations)) $this->model->saveVecho "function calculateDaylyRestTimeViolations starts\n";iolations($violations);
-        print("function calculateDaylyRestTimeViolations returns\n");
+        //  if (!is_null($violations)) $this->model->saveViolations($violations);
+
         return $violations; #json_encode('END');
     }
 
     private function calculateDailyBreaksViolations($driverId, $driverCardIds, $workingTimes)
     {
-        echo "function calculateDailyBreaksViolations starts\n";
         print('Calculateing DB for driver #'.$driverId."\n");
         $violations = array();
 
@@ -1520,7 +1459,7 @@ class VCalc
                 $violationPause15 = false;
                 $startDate = $shift['payment_start_db'];
                 //var_dump('/////////////////////////');
-                //var_dump($activities
+                //var_dump($activities);
                 if (!is_null($activities) && count($activities) > 0)
                 {
                     //var_dump('IN - '.$driverId.' count = '.count($activities));
@@ -1642,13 +1581,11 @@ class VCalc
             }
         }
         //var_dump($violations);
-        echo "function calculateDailyBreaksViolations returns\n";
         return $violations;
     }
 
     private function getDailyBreaksViolations($driverId, $driverCardIds, $dateStart, $dateEnd, $biggestPause, $violationPause15, $drivingTime, $drivingTimeAfterBiggestPause, $drivingTimeToBiggestPause)
     {
-        echo "function getDailyBreaksViolations starts\n";
         $violations = array();
         //calculate fine
         $violationDuration = $drivingTime - 270;
@@ -1781,13 +1718,12 @@ class VCalc
             //var_dump($violationDTpb);
             //var_dump($violationDTpa);
         }
-        echo "function getDailyBreaksViolations returns\n";
+
         return $violations;
     }
 
     private function calculateWLWTViolations($driverId, $driverCardIds, $workingTimes)
     {
-        echo "function calculateWLWTViolations starts\n";
         print('Calculateing AZG for driver #'.$driverId."\n");
         $violations = array();
 
@@ -1806,13 +1742,12 @@ class VCalc
                 //var_dump($violation);
             }
         }
-        echo "function calculateWLWTViolations returns\n";
+
         return $violations;
     }
 
     private function calculateWLDailyBreaksViolations($driverId, $driverCardIds, $workingTimes)
     {
-        echo "function calculateWLDailyBreaksViolations starts\n";
         print('Calculateing WLDB for driver #'.$driverId."\n");
         $violations = array();
 
@@ -2050,13 +1985,11 @@ class VCalc
             }
         }
         //var_dump($violations);
-        echo "function calculateWLDailyBreaksViolations returns\n";
         return $violations;
     }
 
     private function calculateDailyWTViolations($driverId, $driverCardIds, $workingTimes)
     {
-        echo "function calculateDailyWTViolations starts\n";
         print('Calculateing DWT for driver #'.$driverId."\n");
         $violations = array();
 
@@ -2074,13 +2007,11 @@ class VCalc
             }
         }
         //var_dump($violations);
-        echo "function calculateDailyWTViolations returns\n";
         return $violations;
     }
 
     private function trimActivities($activities, $startDate, $endDate)
     {
-        echo "function trimActivities starts\n";
         $startDate = new \DateTime($startDate);
         $startDateTime = strtotime($startDate->format('Y-m-d H:i:s'));
         $endDate = new \DateTime($endDate);
@@ -2104,16 +2035,14 @@ class VCalc
             }
             array_push($trimedActivities, $activity);
         }
-        echo "function trimActivities returns\n";
+
         return $trimedActivities;
     }
 
     private function calculateViolationStartEnd($dateStart, $dateEnd, $duration, $driverCardIds) #oder $activities?
     {
-        echo "function calculateViolationStartEnd starts\n";
         if (is_null($driverCardIds))
         {
-            echo "function calculateViolationStartEnd returns = no DrivercardIds!\n";
             return array('start' => null, 'end' => null);
         }
         else
@@ -2143,17 +2072,14 @@ class VCalc
             
             $dateEnd = new \DateTime($lastDrivingBlock['date_end_utc']);
             $result['end'] = $dateEnd->format('Y-m-d H:i:s');
-            echo "function calculateViolationStartEnd returns\n";
             return $result;
         }
     }
 
     private function calculateWLViolationStartEnd($dateStart, $dateEnd, $duration, $driverCardIds) #oder $activities?
     {
-        echo "function calculateWLViolationStartEnd starts\n";
         if (is_null($driverCardIds))
         {
-            echo "function calculateWLViolationStartEnd returns -- no DrivercardIDs!\n";
             return array('start' => null, 'end' => null);
         }
         else
@@ -2185,8 +2111,6 @@ class VCalc
 
                 $dateEnd = new \DateTime($lastActivityBlock['date_end_utc']);
                 $result['end'] = $dateEnd->format('Y-m-d H:i:s');
-
-                echo "function calculateWLViolationStartEnd returns\n";
                 return $result;
             }
         }
@@ -2194,11 +2118,9 @@ class VCalc
 
     private function getNewDate($date, $operation, $minutes)
     {
-        echo "function getNewDate starts\n";
         $newDate = new \DateTime($date);
         $newDate = $newDate->modify(''.$operation.' '. $minutes .' minutes');
 
-        echo "function getNewDate returns\n";
         return $newDate->format('Y-m-d H:i:s');
     }
 }

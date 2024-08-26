@@ -42,60 +42,62 @@ class Faehre
                                 $ferryEntrys[$key],
                                 $ferryEntrys[$key - 1],
                                 $ferryEntrys[$key - 2]
-                                )) {
-                                    //
-                                    $ferryEntrysToCalculate = array();
-                                    array_push(
-                                        $ferryEntrysToCalculate,
-                                        $ferryEntrys[$key - 2],
-                                        $ferryEntrys[$key - 1],
-                                        $ferryEntrys[$key]
-                                    );
-                                    
-                                    $workingTime = array();
-                                    $workingTime2 = array();
-                                    $workingTime = $this->dbQuery->getWorkingtime($this->driver["idx"], $ferryEntrys[$key - 2]["entry_time"]);
-                                    $workingTime2 = $this->dbQuery->getWorkingtime($this->driver["idx"], $ferryEntrys[$key]["entry_time"]);
-                                    
-                                    if($this->checkForEmpty($workingTime) && $this->checkForEmpty($workingTime2)) {
-                                        
-                                        if($workingTime == $workingTime2) {
-                                            $this->dbQuery->setWorkingTimeInactive($this->driver["idx"], $workingTime[0]["payment_start"]);
-                                        } else {
-                                            $this->dbQuery->setWorkingTimeInactive($this->driver["idx"], $workingTime[0]["payment_start"]);
-                                            $this->dbQuery->setWorkingTimeInactive($this->driver["idx"], $workingTime2[0]["payment_start"]);
-                                        }
-                                        #TODO start
-                                        $restTimeType = $this->dbQuery->getRestTimeType($this->driver["idx"], $ferryEntrys[$key]["entry_time"]);
-                                        $restTimeType = is_null($restTimeType) ? 0 : $restTimeType[0]["rest_time_type"];
-                                        
-                                        $activities = array();
-                                        $activities = $this->dbQuery->getExtraActivities($driverCardId, $workingTime[0]["payment_start"], $ferryEntrys[$key]["entry_time"]);
-                                        #TODO end
-                                    
-                                    $newWorkingTime = $this->dataForNewFerryWorkingTime($activities, $ferryEntrysToCalculate, $restTimeType);
+                            )) {
+                                $ferryEntrysToCalculate = array();
+                                array_push(
+                                    $ferryEntrysToCalculate,
+                                    $ferryEntrys[$key - 2],
+                                    $ferryEntrys[$key - 1],
+                                    $ferryEntrys[$key]
+                                );
+                                $workingTime = array();
+                                $workingTime2 = array();
+                                $workingTime = $this->dbQuery->getWorkingtime($this->driver["idx"], $ferryEntrys[$key - 2]["entry_time"]);
+                                $workingTime2 = $this->dbQuery->getWorkingtime($this->driver["idx"], $ferryEntrys[$key]["entry_time"]);
+                                if($this->checkForEmpty($workingTime) && $this->checkForEmpty($workingTime2)) {
 
+                                    if($workingTime == $workingTime2) {
+                                        $this->dbQuery->setWorkingTimeInactive($this->driver["idx"], $workingTime[0]["payment_start"]);
+                                    } else {
+                                        $this->dbQuery->setWorkingTimeInactive($this->driver["idx"], $workingTime[0]["payment_start"]);
+                                        $this->dbQuery->setWorkingTimeInactive($this->driver["idx"], $workingTime2[0]["payment_start"]);
+                                    }
+                                    $restTimeType = $this->dbQuery->getRestTimeType($this->driver["idx"], $ferryEntrys[$key]["entry_time"]);
+                                    $restTimeType = is_null($restTimeType) ? 0 : $restTimeType[0]["rest_time_type"];
+                                    $activities = array();
+                                    $activities = $this->dbQuery->getExtraActivities($driverCardId, $workingTime[0]["payment_start"], $ferryEntrys[$key]["entry_time"]);
+                                    // var_dump($ferryEntrys[$key]["entry_time"]);
+                                    // var_dump(count($activities));
+                                    // var_dump($activities[0]["start"]);
+                                    // var_dump($activities[count($activities) - 1]["start"]);
+                                    // var_dump($this->secondsToTime($activities[count($activities) - 1]["duration"]));
+                                    $newWorkingTime = $this->dataForNewFerryWorkingTime($activities, $ferryEntrysToCalculate, $restTimeType);
+                                    // var_dump($newWorkingTime["payment_end"]);
+                                    // var_dump($newWorkingTime["daily_rest_time"]);
+                                    // var_dump($newWorkingTime["daily_rest_time"]/60);
                                     $secondStartTime = $newWorkingTime["payment_end"];
                                     $secondStartTime = substr($secondStartTime, 1, -1);
-
-                                    $newStartTime = new \Datetime($secondStartTime);                                    
-                                    $adf = new \DateInterval('PT'. $newWorkingTime["daily_rest_time"] .'M');                                    
+                                    $newStartTime = new \Datetime($secondStartTime);
+                                    // var_dump($newStartTime->format('Y-m-d H:i:s'));
+                                    $adf = new \DateInterval('PT'. $newWorkingTime["daily_rest_time"] .'M');
+                                    // var_dump($adf);
                                     $newStartTime->add($adf);
-
                                     $newEndTime = new \Datetime($workingTime2[0]["payment_end"]);
-
                                     if($newStartTime < $newEndTime) {
-
                                         $secondActivities = array();
                                         $secondActivities = $this->dbQuery->getExtraActivities($driverCardId, $newStartTime->format('Y-m-d H:i:s'), $newEndTime->format('Y-m-d H:i:s'));
-                                        
                                         $extraActiv = $this->dbQuery->getExtraActivitiesAfter($driverCardId, $secondActivities[count($secondActivities)-1]["block_counter"]+1);
                                         if($this->checkForEmpty($extraActiv)) {
                                             $secondActivities = array_merge($secondActivities, $extraActiv);
                                         }
-                                        
+                                        // var_dump($extraActiv);
+                                        // var_dump($secondActivities[count($secondActivities)-1]);
+                                        // $newStartTime->setTimezone(new \DateTimeZone('Europe/Berlin'));
+                                        // var_dump($newStartTime->format('Y-m-d H:i:s'));
+                                        // $newEndTime->setTimezone(new \DateTimeZone('Europe/Berlin'));
+                                        // var_dump($newEndTime->format('Y-m-d H:i:s'));
                                         $secondWorkingTime = $this->dataForNewFerryWorkingTime($secondActivities, $ferryEntrysToCalculate, $restTimeType);
-                                        
+                                        // var_dump($secondWorkingTime["payment_end"]);
                                         $this->dbQuery->insertNewWorkingTime($this->driver["idx"], $newWorkingTime);
                                         $this->dbQuery->insertNewWorkingTime($this->driver["idx"], $secondWorkingTime);
                                         echo("done\n");
@@ -103,6 +105,7 @@ class Faehre
                                         $this->dbQuery->insertNewWorkingTime($this->driver["idx"], $newWorkingTime);
                                         echo("edgecase\n");
                                     }
+
                                 }
                             }
                         }
@@ -110,6 +113,13 @@ class Faehre
                 }
             }
         }
+    }
+
+    public function secondsToTime($seconds)
+    {
+        $dtF = new \DateTime('@0');
+        $dtT = new \DateTime("@$seconds");
+        return $dtF->diff($dtT)->format('%a days, %h hours, %i minutes and %s seconds');
     }
 
     private function checkForEmpty($arrayToCheck)
@@ -125,8 +135,7 @@ class Faehre
         $specificConditionPotentialLast,
         $specificConditionPotentialMiddle,
         $specificConditionPotentialFirst
-    ) 
-    {
+    ) {
         $date = new \Datetime($specificConditionPotentialLast["entry_time"]);
         $dateBefore = new \Datetime($specificConditionPotentialMiddle["entry_time"]);
         $dateTwoBefore = new \Datetime($specificConditionPotentialFirst["entry_time"]);

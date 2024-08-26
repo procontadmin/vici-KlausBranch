@@ -575,13 +575,35 @@ class ACalc
         $allowances = '';
         $regions = "4";
         if (!is_null($driver['state_idx'])) {
+
             $regions .= ",".$driver['state_idx'];
         }
+        if (strlen($regions) > 1){
+            $regionsList = explode(",", $regions);
+        }else{
+            $regionsList = array($regions);
+        }
+
         $today = new \DateTime();
         is_null($driver['hours_per_day']) || $driver['hours_per_day'] == '' ? $driverWorkingHours = 8*60 : $driverWorkingHours = $driver['hours_per_day'];
-        $holydays = $this->dbQuery->getHolydays($startDate, $today->format('Y-m-d'), $regions);
+        $holydays = []; 
+        $holidaysList = $this->dbQuery->getHolydays($startDate, $today->format('Y-m-d'));
 
-        if (!is_null($holydays)) {
+        for ($i = 0; $i < count($holidaysList); $i++) {
+            $holidayRegions = explode(",", $holidaysList[$i]['regions_idx']);
+        
+            foreach ($regionsList as $region) {
+                if (in_array($region, $holidayRegions)) {
+                    $holydays[] = [
+                        'date' => $holidaysList[$i]['date'],
+                        'factor' => $holidaysList[$i]['factor'],
+                    ];
+                }
+            }
+        }
+
+
+        if (!empty($holydays)) {
             foreach ($holydays as $holyday) {
                 if ($this->checkWeekDayCompliance($aGroup, $holyday['date']) == true) {
                     $duration = $driverWorkingHours * $holyday['factor'];
@@ -595,6 +617,7 @@ class ACalc
 
         return;
     }
+    
 
     private function calc($driver, $startDate, $aGroup)
     {

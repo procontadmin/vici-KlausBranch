@@ -1105,9 +1105,9 @@ class CoreDbQueries
                 WHERE driver_idx = $driverId
                 AND date_start >= '$startDate'
                 AND deleted = 0
-                AND (violation_idx = 5 or violation_idx = 8 or violation_idx = 9
-                violation_idx = 10 or violation_idx = 11  or violation_idx = 7 or violation_idx = 6 or violation_idx = 1 or violation_idx = 2
-               or violation_idx = 15 or violation_idx = 16)";
+                AND (violations_idx = 5 or violations_idx = 8 or violations_idx = 9
+                violations_idx = 10 or violations_idx = 11  or violations_idx = 7 or violations_idx = 6 or violations_idx = 1 or violations_idx = 2
+               or violations_idx = 15 orviolations_idx = 16)";
 
         return $this->iuLines($sql);
     }

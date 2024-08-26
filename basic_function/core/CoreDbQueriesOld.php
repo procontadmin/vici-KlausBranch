@@ -18,23 +18,9 @@ class CoreDbQueries
 
     public function getDriverInfo($driverId)
     {
-        $sql = "SELECT d.idx,
-        d.dtco_driver_idx,
-        dc.client_idx,
-        dc.driver_types_idx, 
-        dc.contract_start, 
-        dc.expenses_near, 
-        dc.expenses_far, 
-        d.number,
-        cc.parent_idx, 
-        dc.allowance_groups_idx, 
-        dc.home_zip, 
-        dc.auto_expenses, 
-        d.last_name, 
-        d.first_name, 
-        dc.hours_per_day, 
-        dc.state_idx,
-        DATE_FORMAT(dc.contract_start, '%Y-%m-%d') as 'contract_start'
+        $sql = "SELECT d.idx, d.dtco_driver_idx, dc.client_idx, dc.driver_types_idx, dc.contract_start, dc.expenses_near, dc.expenses_far, d.number,
+                        cc.parent_idx, dc.allowance_groups_idx, dc.home_zip, dc.auto_expenses, d.last_name, d.first_name, dc.hours_per_day, dc.state_idx,
+		 	DATE_FORMAT(dc.contract_start, '%Y-%m-%d') as 'contract_start'
                 FROM difa_resources.driver_contract dc
                 LEFT JOIN difa_resources.driver d
                     ON d.idx = dc.driver_idx
@@ -69,7 +55,7 @@ class CoreDbQueries
     public function getLastDShift($driverId, $dateStart)
     {
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT DATE_FORMAT(MAX(payment_end), '%Y-%m-%d') as 'dateStart'
                 FROM $dbTable
@@ -134,7 +120,7 @@ class CoreDbQueries
     public function getShiftTimes($telematicId, $driverId, $startDate) # Holt alle Positionen eines Fahrer in einem Datumsbereich
     {
         $dbTable = "difa_driver_geopositions.difa_geopositions_$telematicId";
-        $dbTable .= str_pad($driverId, 15, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 15 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT IF(activity = 795, 1, 0) as 'shift',
                         DATE_FORMAT(time_stamp, '%Y-%m-%d %H:%i:%s') as 'time_stamp'
@@ -177,46 +163,25 @@ class CoreDbQueries
 
         return $this->iudLines($sql, $values);
     }
-    public function getLastActivityFromAltCard($driverCardId,$startDate)
-    {
-        $dbTable = "difa_drivercard_activities.driver_activities_";
-        $dbTable .= str_pad($driverCardId, 8, "0", STR_PAD_LEFT);
-
-        $sql= "SELECT * FROM $dbTable WHERE start >= '$startDate'";
-
-        return $this->querySelect($sql);
-    }
 
     public function getDriverActivities($driverCardIds, $startDate, $endDate = null)
     {
         $filter = " WHERE `start` >= '".$startDate."'";
-        if (!is_null($endDate)) {
-            $filter .= " AND `start` <= '".$endDate."'";
+        if (!is_null($endDate))
+        {
+            $filter .= " AND `start` <= '".$endDate." 23:59:59'";
         }
-        $driverCardsNew = array();
-        if (count($driverCardIds) > 1) 
+
+        if (count($driverCardIds) > 1)
         {
             for ($i = 0; $i < count($driverCardIds); $i++)
             {
-                if($this->getLastActivityFromAltCard($driverCardIds[$i],$startDate) != null)
+                if ($i == 0)
                 {
-
-                    //echo("Entfernen von Karten."\n");
-                    $driverCardsNew[] = $driverCardIds[$i];
-                    
-                }
-            }
-        }
-    
-        $driverCardIds = $driverCardsNew;
-        
-        if (count($driverCardIds) > 1) {
-            for ($i = 0; $i < count($driverCardIds); $i++) {
-                if ($i == 0) {
                     $dbTable = "difa_temp.driver_activities_";
-                    $dbTable .= str_pad($driverCardIds[$i], 8, "0", STR_PAD_LEFT);
+                    $dbTable .= str_pad($driverCardIds[$i], 8 ,"0" , STR_PAD_LEFT);
                     $tempTable = "difa_drivercard_activities.driver_activities_";
-                    $tempTable .= str_pad($driverCardIds[$i], 8, "0", STR_PAD_LEFT);
+                    $tempTable .= str_pad($driverCardIds[$i], 8 ,"0" , STR_PAD_LEFT);
                     $drop = "DROP TABLE IF EXISTS $dbTable;";
                     $this->iuLines($drop);
 
@@ -233,10 +198,12 @@ class CoreDbQueries
                                             SELECT `start` 
                                             FROM $tempTable 
                                             GROUP BY `start` 
-                                            HAVING count(*) > 1)))";
-                } else {
+                                            HAVING count(*) > 1)))";  
+                }
+                else
+                {
                     $tempTable = "difa_drivercard_activities.driver_activities_";
-                    $tempTable .= str_pad($driverCardIds[$i], 8, "0", STR_PAD_LEFT);
+                    $tempTable .= str_pad($driverCardIds[$i], 8 ,"0" , STR_PAD_LEFT);
                     $stm .= " UNION 
                                 (SELECT *
                                 FROM $tempTable
@@ -274,9 +241,11 @@ class CoreDbQueries
                     FROM  $dbTable";
             $sql .= $filter;
             $sql .= " ORDER BY date_start ASC;";
-        } else {
+        }
+        else
+        {
             $dbTable = "difa_drivercard_activities.driver_activities_";
-            $dbTable .= str_pad($driverCardIds[0], 8, "0", STR_PAD_LEFT);
+            $dbTable .= str_pad($driverCardIds[0], 8 ,"0" , STR_PAD_LEFT);
 
             $sql = "SELECT  `slot`,
                             `team`,
@@ -314,17 +283,21 @@ class CoreDbQueries
     public function getDriverActivitiesD($driverCardIds, $startDate, $endDate = null)
     {
         $filter = " WHERE date_add(CONVERT_TZ(`start`,'UTC','CET'), INTERVAL (duration/60) MINUTE) >= '".$startDate."'";
-        if (!is_null($endDate)) {
-            $filter .= " AND `start` <= '".$endDate."'";
+        if (!is_null($endDate))
+        {
+            $filter .= " AND `start` <= '".$endDate." 23:59:59'";
         }
 
-        if (count($driverCardIds) > 1) {
-            for ($i = 0; $i < count($driverCardIds); $i++) {
-                if ($i == 0) {
+        if (count($driverCardIds) > 1)
+        {
+            for ($i = 0; $i < count($driverCardIds); $i++)
+            {
+                if ($i == 0)
+                {
                     $dbTable = "difa_temp.driver_activities_";
-                    $dbTable .= str_pad($driverCardIds[$i], 8, "0", STR_PAD_LEFT);
+                    $dbTable .= str_pad($driverCardIds[$i], 8 ,"0" , STR_PAD_LEFT);
                     $tempTable = "difa_drivercard_activities.driver_activities_";
-                    $tempTable .= str_pad($driverCardIds[$i], 8, "0", STR_PAD_LEFT);
+                    $tempTable .= str_pad($driverCardIds[$i], 8 ,"0" , STR_PAD_LEFT);
                     $drop = "DROP TABLE IF EXISTS $dbTable;";
                     $this->iuLines($drop);
 
@@ -341,10 +314,12 @@ class CoreDbQueries
                                             SELECT `start` 
                                             FROM $tempTable 
                                             GROUP BY `start` 
-                                            HAVING count(*) > 1)))";
-                } else {
+                                            HAVING count(*) > 1)))";  
+                }
+                else
+                {
                     $tempTable = "difa_drivercard_activities.driver_activities_";
-                    $tempTable .= str_pad($driverCardIds[$i], 8, "0", STR_PAD_LEFT);
+                    $tempTable .= str_pad($driverCardIds[$i], 8 ,"0" , STR_PAD_LEFT);
                     $stm .= " UNION 
                                 (SELECT *
                                 FROM $tempTable
@@ -382,9 +357,11 @@ class CoreDbQueries
                     FROM  $dbTable";
             $sql .= $filter;
             $sql .= " ORDER BY date_start ASC;";
-        } else {
+        }
+        else
+        {
             $dbTable = "difa_drivercard_activities.driver_activities_";
-            $dbTable .= str_pad($driverCardIds[0], 8, "0", STR_PAD_LEFT);
+            $dbTable .= str_pad($driverCardIds[0], 8 ,"0" , STR_PAD_LEFT);
 
             $sql = "SELECT  `slot`,
                             `team`,
@@ -420,11 +397,11 @@ class CoreDbQueries
     }
 
      public function getWorkingTimesForMapper($driverId, $startDate, $timezone, $beginnInterval = -130, $endInterval = 360) # Holt alle WorkingTimes von einem Fahrer die kein place_start und kein country_start haben
-     {
-         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-         $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+    {
+        $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
-         $sql = "SELECT  idx,
+        $sql = "SELECT  idx,
 		        duration_all as 'duration_all_real',
                         IF(duration_all_manual = 0 or duration_all_manual is null, duration_all, duration_all_manual) as 'duration_all',
                         duration_driving,
@@ -438,13 +415,13 @@ class CoreDbQueries
                     WHERE payment_start >= '$startDate'
                     ORDER BY payment_start ASC";
 
-         return $this->querySelect($sql);
-     }
+        return $this->querySelect($sql);
+    }
 
     public function getWorkingTimes($driverId, $startDate, $endDate = null, $order = null)
     {
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT  *,
                         DATE_FORMAT(payment_start, '%Y') as 'year',
@@ -460,14 +437,20 @@ class CoreDbQueries
                         DATE_FORMAT(payment_end, '%H:%i') as 'time_end'
                 FROM $dbTable
                 WHERE payment_start >= '$startDate'";
-        if (!is_null($endDate)) {
+        if (!is_null($endDate))
+        {
             $sql .= "AND payment_start < '$endDate'";
         }
-        if (is_null($order)) {
+        if (is_null($order))
+        {
             $sql .= ' GROUP BY `payment_start` ORDER BY `payment_start_db`';
-        } elseif ($order == 'daily_rest_time') {
+        }
+        elseif ($order == 'daily_rest_time')
+        {
             $sql .= ' GROUP BY `payment_start` ORDER BY `daily_rest_time` ASC';
-        } elseif ($order == 'duration_driving') {
+        }
+        elseif ($order == 'duration_driving')
+        {
             $sql .= ' GROUP BY `payment_start` ORDER BY `duration_driving` DESC';
         }
 
@@ -477,12 +460,10 @@ class CoreDbQueries
     public function getWorkingTimesCET($driverId, $startDate, $endDate = null)
     {
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $filter = '';
-        if (!is_null($endDate)) {
-            $filter = " AND CONVERT_TZ(`payment_start`,'UTC','CET') <= '$startDate 23:59:59' ";
-        }
+        if(!is_null($endDate)) $filter = " AND CONVERT_TZ(`payment_start`,'UTC','CET') <= '$startDate 23:59:59' ";
         $sql = "SELECT  DATE_FORMAT(CONVERT_TZ(`payment_start`,'UTC','CET'), '%Y') as 'year',
                         CONVERT_TZ(`payment_start`,'UTC','CET') as 'payment_start',
                         CONVERT_TZ(`payment_end`,'UTC','CET') as 'payment_end',
@@ -514,7 +495,7 @@ class CoreDbQueries
     public function getWorkingTimesExp($driverId, $startDate)
     {
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT  *,
                         DATE_FORMAT(CONVERT_TZ(`payment_start`,'UTC','CET'), '%Y') as 'year',
@@ -553,7 +534,7 @@ class CoreDbQueries
     public function getWorkingTimesForGeo($driverId, $startDate, $timezone, $beginnInterval = -130, $endInterval = 360) # Holt alle WorkingTimes von einem Fahrer die kein place_start und kein country_start haben
     {
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT  idx,
                         duration_all,
@@ -572,7 +553,7 @@ class CoreDbQueries
     public function getGeoPositions_old($clientId, $driverId, $startDate, $endDate) # Holt alle Positionen eines Fahrer in einem Datumsbereich
     {
         $dbTable = "difa_geo_datacentre.geo_position_";
-        $dbTable .= str_pad($clientId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($clientId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT city, country, time_stamp
                 FROM $dbTable
@@ -586,7 +567,7 @@ class CoreDbQueries
     public function getGeoPositions($clientId, $driverId, $startDate) # Holt alle Positionen eines Fahrer in einem Datumsbereich
     {
         $dbTable = "difa_geo_datacentre.geo_position_";
-        $dbTable .= str_pad($clientId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($clientId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT city, country, time_stamp
                 FROM $dbTable
@@ -599,7 +580,7 @@ class CoreDbQueries
     public function getSchiftTimes($clientId, $driverId, $startDate) # Holt alle Positionen eines Fahrer in einem Datumsbereich
     {
         $dbTable = "difa_client_workingtimes.shift_";
-        $dbTable .= str_pad($clientId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($clientId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT *,
                         DATE_FORMAT(time_stamp, '%Y-%m-%d %H:%i:%s') as 'time_stamp'
@@ -613,8 +594,8 @@ class CoreDbQueries
     public function getLDMode($driverCardIds, $startDate, $endDate) # Holt alle Positionen eines Fahrer in einem Datumsbereich
     {
         $dbTable = "difa_drivercard_usage.driver_usage_";
-        $dbTable .= str_pad($driverCardIds, 8, "0", STR_PAD_LEFT);
-
+        $dbTable .= str_pad($driverCardIds, 8 ,"0" , STR_PAD_LEFT);
+        
         $sql = "SELECT *
                 FROM $dbTable
                 WHERE begin_use >= '$startDate'
@@ -625,19 +606,19 @@ class CoreDbQueries
     public function changeET($number)
     {
         $dbTable = "difa_driver_expenses.driver_expenses_";
-        $dbTable .= str_pad($number, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($number, 8 ,"0" , STR_PAD_LEFT);
         $sql1 ="ALTER TABLE $dbTable 
             CHANGE COLUMN user_amount user_amount DECIMAL(4, 2) DEFAULT NULL;";
         $sql2 ="UPDATE $dbTable
             SET user_amount = null WHERE 1;";
-        $this->iuLines($sql1);
+         $this->iuLines($sql1);
         return $this->iuLines($sql2);
     }
 
     public function updateGeoCoordinates($driverId, $idx, $startLandId, $startCity, $endLandId, $endCity, $borderLandId, $borderTime, $stopover)
     {
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $stmt = "UPDATE $dbTable 
                  SET place_start=?, country_start=?, place_end=?, country_end=?, country_border_crossing=?, time_border_crossing=?, stopover = ?
@@ -648,7 +629,7 @@ class CoreDbQueries
     public function updateShiftTimes($driverId, $idx, $start, $end, $durationManual)
     {
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $stmt = "UPDATE $dbTable
                  SET payment_start_manual = IF(payment_start_manual is null, CONVERT_TZ(?,'CET','UTC'), payment_start_manual),
@@ -663,7 +644,7 @@ class CoreDbQueries
     public function saveWorkingTimes($driverId, $workingTimes)
     {
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "INSERT INTO $dbTable
                         (`payment_start`, `payment_end`, `duration_all`, `duration_driving`, `duration_work`, `duration_standby`, `duration_standby_team`, `duration_break0`, 
@@ -682,7 +663,7 @@ class CoreDbQueries
     public function deleteWorkingTimes($driverId, $startDate)
     {
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "DELETE FROM $dbTable
                 WHERE payment_start >= $startDate;";
@@ -693,7 +674,7 @@ class CoreDbQueries
     public function truncateWorkingTimesTable($driverId)
     {
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "TRUNCATE TABLE $dbTable;";
 
@@ -703,7 +684,7 @@ class CoreDbQueries
     public function truncateDocketsTable($driverId)
     {
         $dbTable = "difa_driver_dockets.driver_docket_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "TRUNCATE TABLE $dbTable;";
 
@@ -713,7 +694,7 @@ class CoreDbQueries
     public function savePlaces($clientId, $placesValues)
     {
         $dbTable = "difa_geo_datacentre.geo_position_";
-        $dbTable .= str_pad($clientId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($clientId, 8 ,"0" , STR_PAD_LEFT);
         $sql = "INSERT INTO $dbTable
                         (`city`, `country`, `time_stamp`, `driver_number`, `driver_idx`, `status_driver`, `status_geo`)
                 VALUES     $placesValues";
@@ -724,7 +705,7 @@ class CoreDbQueries
     public function saveAllowances($driverId, $allowances)
     {
         $dbTable = "difa_driver_allowances.driver_allowances_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "INSERT INTO $dbTable
                             (`payment_date`, `payment_group`, `amount`)
@@ -737,7 +718,7 @@ class CoreDbQueries
     public function deleteAllowances($driverId, $startDate)
     {
         $dbTable = "difa_driver_allowances.driver_allowances_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "DELETE FROM $dbTable
                 WHERE payment_date >= '$startDate';";
@@ -760,7 +741,7 @@ class CoreDbQueries
     public function getFreeDays($driverId, $month, $type)
     {
         $dbTable = "difa_driver_dockets.driver_docket_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT count(*) as 'count'
                 FROM $dbTable
@@ -773,13 +754,12 @@ class CoreDbQueries
     public function getLastShift($driverId, $date = null)
     {
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT DATE_FORMAT(MAX(payment_start), '%Y-%m-%d %H:%i:%s') as 'dateStart'
                 FROM $dbTable";
-        if (!is_null($date)) {
+        if (!is_null($date))
             $sql .= " WHERE payment_start < '$date'";
-        }
 
         return $this->querySelect($sql, true);
     }
@@ -787,13 +767,12 @@ class CoreDbQueries
     public function getLastShiftV($driverId, $date = null)
     {
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT DATE_FORMAT(MAX(payment_start), '%Y-%m-%d %H:%i:%s') as 'dateStart'
                 FROM $dbTable";
-        if (!is_null($date)) {
+        if (!is_null($date))
             $sql .= " WHERE payment_start < '$date' AND rest_time_type = 1 and rest_time_all > 2880";
-        }
 
         return $this->querySelect($sql, true);
     }
@@ -801,7 +780,7 @@ class CoreDbQueries
     public function getLastEDay($driverId)
     {
         $dbTable = "difa_driver_expenses.driver_expenses_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT DATE_FORMAT(MAX(date), '%Y-%m-%d %H:%i:%s') as 'expenses_day'
                 FROM $dbTable";
@@ -812,7 +791,7 @@ class CoreDbQueries
     public function getLastEShift($driverId, $dateStart, $expPlaces)
     {
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT DATE_FORMAT(MAX(payment_start), '%Y-%m-%d %H:%i:%s') as 'dateStart'
                 FROM $dbTable
@@ -826,7 +805,7 @@ class CoreDbQueries
     public function getLastDocketDay($driverId)
     {
         $dbTable = "difa_driver_dockets.driver_docket_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT DATE_FORMAT(MAX(payment_date), '%Y-%m-%d') as 'dateStart'
                 FROM $dbTable
@@ -835,7 +814,7 @@ class CoreDbQueries
         return $this->querySelect($sql, true);
     }
 
-    public function getClientPaymentGroups($clientId, $type, $driverId, $condition = false)
+    public function getClientPaymentGroups($clientId, $type, $driverId, $condition = false) 
     {
         $sql = "SELECT  pg.idx,
                         pg.global,
@@ -873,15 +852,14 @@ class CoreDbQueries
                                                 WHERE driver_idx = $driverId
                                                     AND contract_end is null)) 
                     OR pg.global = 1)";
-        if ($condition) {
+        if ($condition)
             $sql .= $condition;
-        }
         $sql .= ";";
 
         return $this->querySelect($sql);
     }
 
-    public function getClientPaymentGroupsAllowances($clientId, $type, $driverId, $historyId, $driverType, $condition = false)
+    public function getClientPaymentGroupsAllowances($clientId, $type, $driverId, $historyId, $driverType, $condition = false) 
     {
         $sql = "SELECT  pg.idx,
                         pg.global,
@@ -922,16 +900,14 @@ class CoreDbQueries
                                                 AND dc.contract_end is not null))
                     OR pg.global = 1
                     OR find_in_set ($driverType, pg.driver_type_idx))";
-        if ($condition) {
+        if ($condition)
             $sql .= $condition;
-        }
         $sql .= ";";
-        //print $sql."\n\n";
+	//print $sql."\n\n";
         return $this->querySelect($sql);
     }
 
-    public function getDayDates($days, $clientRegions)
-    {
+    public function getDayDates($days, $clientRegions) {
         $sql = "SELECT  dd.*,
                         DATE_FORMAT(day_date, '%Y-%m-%d') as 'f_day_date'
                 FROM difa_driver_payments.payment_days_dates dd
@@ -944,7 +920,7 @@ class CoreDbQueries
     public function saveWageTimes($driverId, $wageTimesValues)
     {
         $dbTable = "difa_driver_dockets.driver_docket_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "INSERT INTO $dbTable
                             (`payment_date`, `payment_group`, `payment_type`, `payment_duration`)
@@ -957,11 +933,9 @@ class CoreDbQueries
     public function deleteWageTimes($driverId, $startDate, $endDate = null)
     {
         $dbTable = "difa_driver_dockets.driver_docket_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
         $filter = '';
-        if (!is_null($endDate)) {
-            $filter = " AND payment_date <= $endDate ";
-        }
+        if (!is_null($endDate)) $filter = " AND payment_date <= $endDate ";
         $sql = "DELETE FROM $dbTable
                 WHERE payment_date >= $startDate
                     $filter
@@ -969,7 +943,7 @@ class CoreDbQueries
 
         return $this->iuLines($sql);
     }
-
+    
     public function getCountries()
     {
         $sql = "SELECT  *
@@ -982,12 +956,10 @@ class CoreDbQueries
     }
 
     public function getExpensesForCountry($regionId, $year, $clientId = '0')
-    {
-        if ($regionId == null) {
-            return null;
-        }
+    {   
+        if ($regionId == null) {return null;}
         $dbTable = "difa_client_expenses.client_expenses_";
-        $dbTable .= str_pad($clientId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($clientId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT *
                 FROM $dbTable
@@ -1000,23 +972,24 @@ class CoreDbQueries
     public function getExpenses($driverId, $dateStart, $dateEnd, $condition = false)
     {
         $dbTable = "difa_driver_expenses.driver_expenses_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT  DATE_FORMAT(e.date, '%Y-%m-%d') as 'date',
                         e.amount 
                 FROM $dbTable e
                 WHERE date >= '$dateStart'
                     AND date <= '$dateEnd'";
-        if ($condition != false) {
+        if ($condition != false)
+        {
             $sql .= $condition;
         }
-        return $this->querySelect($sql);
+        return $this->querySelect($sql);       
     }
 
     public function deleteExpenses($driverId, $date)
     {
         $dbTable = "difa_driver_expenses.driver_expenses_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "DELETE FROM $dbTable
                 WHERE date >= '$date';";
@@ -1027,7 +1000,7 @@ class CoreDbQueries
     public function saveExpenses($driverId, $expensesValues)
     {
         $dbTable = "difa_driver_expenses.driver_expenses_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "INSERT IGNORE INTO $dbTable
                             (`date`, `amount`, `shifts`, `tour`, `country`)
@@ -1039,7 +1012,7 @@ class CoreDbQueries
     public function updateExpensesPlaces($driverId, $placeStart, $placeEnd, $startDate, $single = false)
     {
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "UPDATE $dbTable SET place_start = '$placeStart', place_end = '$placeEnd', country_start = 4, country_end = 4 WHERE";
         $single == false ? $sql .= " payment_start >= '$startDate';" : $sql .= " payment_start = '$startDate';";
@@ -1049,7 +1022,7 @@ class CoreDbQueries
     public function getOvernight($driverId, $dateStart, $dateEnd)
     {
         $dbTable = "difa_driver_expenses.driver_expenses_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT DATE_FORMAT(e.date, '%Y-%m-%d') as 'date' FROM $dbTable e where date >= '$dateStart' and date < '$dateEnd' and RIGHT(shifts,5) = '24:00'";
 
@@ -1059,7 +1032,7 @@ class CoreDbQueries
     public function getExtraHours($driverId, $dateStart, $dateEnd, $condition)
     {
         $dbTable = "difa_driver_dockets.driver_docket_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT DATE_FORMAT(d.payment_date, '%Y-%m-%d') as 'date',
                         d.payment_duration
@@ -1071,14 +1044,15 @@ class CoreDbQueries
         return $this->querySelect($sql);
     }
 
-    public function getHolydays($dateStart, $dateEnd)
+    public function getHolydays($dateStart, $dateEnd, $regions)
     {
-        $sql = "SELECT DATE_FORMAT(dd.day_date, '%Y-%m-%d') as 'date', pd.factor, dd.day_idx, pd.regions_idx
+        $sql = "SELECT DATE_FORMAT(dd.day_date, '%Y-%m-%d') as 'date', pd.factor
                 FROM difa_driver_payments.payment_days_dates dd 
                 LEFT JOIN difa_driver_payments.payment_days pd
                     ON dd.day_idx = pd.idx
                 WHERE dd.day_date > '$dateStart'
-                    AND dd.day_date < '$dateEnd'";
+                    AND dd.day_date < '$dateEnd'
+                    AND pd.regions_idx in ($regions)";
 
         return $this->querySelect($sql);
     }
@@ -1104,31 +1078,34 @@ class CoreDbQueries
         $sql = "DELETE FROM difa_driver_violation.driver_violations
                 WHERE driver_idx = $driverId
                 AND date_start >= '$startDate'
-                AND deleted = 0
-                AND (violation_idx = 5 or violation_idx = 8 or violation_idx = 9
-                violation_idx = 10 or violation_idx = 11  or violation_idx = 7 or violation_idx = 6 or violation_idx = 1 or violation_idx = 2
-               or violation_idx = 15 or violation_idx = 16)";
+                AND deleted = 0";
 
         return $this->iuLines($sql);
     }
+
     public function getLandSigns($driverCardIds, $time)
     {
-        if (count($driverCardIds) > 1) {
-            for ($i = 0; $i < count($driverCardIds); $i++) {
-                if ($i == 0) {
+        if (count($driverCardIds) > 1)
+        {
+            for ($i = 0; $i < count($driverCardIds); $i++)
+            {
+                if ($i == 0)
+                {
                     $dbTable = "difa_temp.driver_places_";
-                    $dbTable .= str_pad($driverCardIds[$i], 8, "0", STR_PAD_LEFT);
+                    $dbTable .= str_pad($driverCardIds[$i], 8 ,"0" , STR_PAD_LEFT);
                     $tempTable = "difa_drivercard_places.driver_places_";
-                    $tempTable .= str_pad($driverCardIds[$i], 8, "0", STR_PAD_LEFT);
+                    $tempTable .= str_pad($driverCardIds[$i], 8 ,"0" , STR_PAD_LEFT);
                     $drop = "DROP TABLE IF EXISTS $dbTable;";
                     $this->iuLines($drop);
 
                     $stm = "CREATE temporary TABLE $dbTable 
                             ENGINE = MEMORY as
-                            (SELECT  * FROM $tempTable)";
-                } else {
+                            (SELECT  * FROM $tempTable)";  
+                }
+                else
+                {
                     $tempTable = "difa_drivercard_places.driver_places_";
-                    $tempTable .= str_pad($driverCardIds[$i], 8, "0", STR_PAD_LEFT);
+                    $tempTable .= str_pad($driverCardIds[$i], 8 ,"0" , STR_PAD_LEFT);
                     $stm .= " UNION (SELECT * FROM $tempTable)";
                 }
             }
@@ -1140,9 +1117,11 @@ class CoreDbQueries
                     FROM  $dbTable
                     WHERE `entry` < date_add('$time', INTERVAL 2 HOUR)
                         AND `entry` > date_add('$time', INTERVAL -2 HOUR);";
-        } else {
+        }
+        else
+        {
             $dbTable = "difa_drivercard_places.driver_places_";
-            $dbTable .= str_pad($driverCardIds[0], 8, "0", STR_PAD_LEFT);
+            $dbTable .= str_pad($driverCardIds[0], 8 ,"0" , STR_PAD_LEFT);
 
             $sql = "SELECT idx
                     FROM $dbTable
@@ -1156,8 +1135,8 @@ class CoreDbQueries
     public function getRestTimes($driverId, $startDate)
     {
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
-
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
+        
         $sql = "SELECT  *,
                         date_add(payment_end, INTERVAL rest_time_all MINUTE) as 'time_end',
                         DATE_FORMAT(payment_end, '%Y-%m-%d %H:%i') as 'date_start_utc',
@@ -1167,14 +1146,14 @@ class CoreDbQueries
                 WHERE payment_end >= '$startDate'
                     AND rest_time_type = 1
                 ORDER BY payment_start";
-        //print "\n".$sql."\n";
+//print "\n".$sql."\n";
         return $this->querySelect($sql);
     }
 
     public function getShortenedRestTimes($driverId, $startDate, $endDate)
     {
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT  *,
                         date_add(payment_end, INTERVAL rest_time_all MINUTE) as 'time_end',
@@ -1196,9 +1175,9 @@ class CoreDbQueries
     public function setShortenedWRT($driverId, $values)
     {
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
-
+      
         $sql = "UPDATE $dbTable
                 SET `rest_time_type` = 2,
                     `rest_time_compensation` = :rest_time_compensation
@@ -1210,7 +1189,7 @@ class CoreDbQueries
     public function resetShortenedWRT($driverId, $startDate)
     {
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "UPDATE $dbTable
                 SET `rest_time_type` = null,
@@ -1224,7 +1203,7 @@ class CoreDbQueries
     public function getWeeklyRestTimes($driverId, $startDate)
     {
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT  *,
                         DATE_FORMAT(payment_end, '%Y-%m-%d %H:%i') as 'date_start_utc',
@@ -1259,30 +1238,41 @@ class CoreDbQueries
 
     final protected function querySelect(&$query, $oneLine = false, $log = false)
     {
-        try {
+        try
+        {
             $stmt = $this->db->query($query);
             $amount = $stmt->rowCount();
-            if ($amount > 0) {
-                if ($oneLine) {
+            if ($amount > 0)
+            {
+                if ($oneLine)
+                {
                     return $stmt->fetch();
-                } else {
+                }
+                else
+                {
                     return $stmt->fetchAll();
                 }
-            } elseif ($amount == 0) {
+            } 
+            elseif ($amount == 0)
+            {
                 return null;
-            } else {
+            } 
+            else
+            {
                 return null;
             }
-        } catch(PDOException $e) {
+        } 
+        catch(PDOException $e)
+        {
             print_r($e);
             return null;
         }
     }
-
+    
     public function createDriverTables($driverId)
     {
         $dbTable = "difa_driver_dockets.driver_docket_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $stm = "CREATE TABLE IF NOT EXISTS $dbTable (
                     `idx` int(11) NOT NULL AUTO_INCREMENT,
@@ -1302,7 +1292,7 @@ class CoreDbQueries
         $this->iuLines($stm);
 
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $stm = "CREATE TABLE IF NOT EXISTS $dbTable (
                     `idx` int(11) NOT NULL AUTO_INCREMENT,
@@ -1345,11 +1335,11 @@ class CoreDbQueries
                 ) ENGINE = INNODB,
                 CHARACTER SET utf8mb4,
                 COLLATE utf8mb4_unicode_ci;";
-
+                        
         $this->iuLines($stm);
 
         $dbTable = "difa_driver_allowances.driver_allowances_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $stm = "CREATE TABLE IF NOT EXISTS  $dbTable (
                     `payment_date` DATETIME NOT NULL,
@@ -1366,7 +1356,7 @@ class CoreDbQueries
         $this->iuLines($stm);
 
         $dbTable = "difa_driver_expenses.driver_expenses_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $stm = "CREATE TABLE IF NOT EXISTS $dbTable (
                     `date` DATETIME NOT NULL,
@@ -1385,44 +1375,52 @@ class CoreDbQueries
 
         return $this->iuLines($stm);
     }
-
+    
     final protected function iudLines(&$query, $values, $returnId = false, $log = false)
     {
         $stmt = $this->db->prepare($query);
 
-        try {
+        try
+        {
             $this->db->beginTransaction();
             $stmt->execute($values);
             $this->db->commit();
             $amount =  $stmt->rowCount();
-            if ($returnId === true) {
-                switch ($amount) {
+            if($returnId === true)
+            {
+                switch ($amount)
+                {
                     case 1:
                         return $this->db->lastInsertId();
                         break;
-                    case -1:
+                    case -1:    
                         //$this->logSQLError($codeLine, $query);
-                    case 0:
+                    case 0:        
                         return null;
                         break;
                 }
             }
-            if ($amount >= 0) {
+            if ($amount >= 0)
+            {
                 return $amount;
-            } else {
+            } 
+            else
+            {
                 return null;
             }
-        } catch(PDOException $e) {
+        } 
+        catch(PDOException $e)
+        {
             $this->db->rollback();
             print_r($e);
             return null;
         }
     }
-
+    
     public function getAEDate($driverId, $driverZip)
     {
         $dbTable = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbTable .= str_pad($driverId, 8, "0", STR_PAD_LEFT);
+        $dbTable .= str_pad($driverId, 8 ,"0" , STR_PAD_LEFT);
 
         $sql = "SELECT DATE_FORMAT(MAX(payment_end), '%Y-%m-%d %H:%i:%s') as 'dateStart'
                 FROM $dbTable
@@ -1434,229 +1432,40 @@ class CoreDbQueries
     {
         $stmt = $this->db->prepare($query);
 
-        try {
+        try
+        {
             $this->db->beginTransaction();
             $stmt->execute();
             $this->db->commit();
             $amount =  $stmt->rowCount();
-            if ($returnId === true) {
-                switch ($amount) {
+            if($returnId === true)
+            {
+                switch ($amount)
+                {
                     case 1:
                         return $this->db->lastInsertId();
                         break;
-                    case -1:
+                    case -1:    
                         //$this->logSQLError($codeLine, $query);
-                    case 0:
+                    case 0:        
                         return null;
                         break;
                 }
             }
-            if ($amount >= 0) {
+            if ($amount >= 0)
+            {
                 return $amount;
-            } else {
+            } 
+            else
+            {
                 return null;
             }
-        } catch(PDOException $e) {
+        } 
+        catch(PDOException $e)
+        {
             $this->db->rollback();
-            echo("fehler \n");
-            //print_r($e);
+            print_r($e);
             return null;
         }
-    }
-
-    public function getSpecificCondition($driverDTCOId)
-    {
-        $sql = "SELECT entry_time
-                FROM difa_dtco_datacentre.dtco_notice_specificcondition
-                WHERE 
-                    dtco_driver_idx = $driverDTCOId 
-                    and type = '3';";
-        return $this->querySelect($sql);
-    }
-
-    public function getSpecifcActivities($driverDTCOId, $specificTime)
-    {
-        $dbTable = "difa_drivercard_activities.driver_activities_";
-        $dbTable .= str_pad($driverDTCOId, 8, "0", STR_PAD_LEFT);
-
-        $sql = "SELECT *
-        FROM $dbTable
-        WHERE START > DATE_ADD('$specificTime',INTERVAL -7 MINUTE)
-        AND START < DATE_ADD('$specificTime',INTERVAL 11 HOUR);";
-
-        return $this->querySelect($sql);
-    }
-
-    public function getTimedActivity($driverDTCOId, $dayOfCondition)
-    {
-        $dbActivities = "difa_drivercard_activities.driver_activities_";
-        $dbActivities .= str_pad($driverDTCOId, 8, "0", STR_PAD_LEFT);
-
-        $sql="SELECT min(TIMEDIFF(start,'$dayOfCondition')) as diff,start,duration
-        FROM $dbActivities
-        WHERE START >= DATE_ADD('$dayOfCondition', INTERVAL -10 MINUTE)
-        AND START <= DATE_ADD('$dayOfCondition', INTERVAL 10 MINUTE)
-        AND activity = 0
-        group by start;";
-
-        return $this->querySelect($sql);
-    }
-
-    public function getWorkingtime($driverIdx, $dayOfCondition)
-    {
-        $dbWorkingtimes = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbWorkingtimes .= str_pad($driverIdx, 8, "0", STR_PAD_LEFT);
-
-        $sql="SELECT payment_start,payment_end FROM $dbWorkingtimes
-            WHERE payment_start <= DATE_ADD('$dayOfCondition', INTERVAL 10 MINUTE)
-            and payment_end >= DATE_ADD('$dayOfCondition', INTERVAL -10 MINUTE);";
-
-        return $this->querySelect($sql);
-    }
-
-    public function setWorkingTimeInactive($driverIdx, $dayOfCondition)
-    {
-        $dbWorkingtimes = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbWorkingtimes .= str_pad($driverIdx, 8, "0", STR_PAD_LEFT);
-        $sql="DELETE FROM $dbWorkingtimes
-             WHERE payment_start <= '$dayOfCondition'
-             and payment_end >= '$dayOfCondition';";
-        return $this->iuLines($sql);
-    }
-
-    public function getSpecialActivitiesBefore($driverDTCOId, $driverIdx, $dayOfCondition)
-    {
-        $dbActivities = "difa_drivercard_activities.driver_activities_";
-        $dbActivities .= str_pad($driverDTCOId, 8, "0", STR_PAD_LEFT);
-        $dbWorkingtimes = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbWorkingtimes .= str_pad($driverIdx, 8, "0", STR_PAD_LEFT);
-        $sql="SELECT *
-        FROM $dbActivities
-        WHERE START >= (
-            SELECT payment_start FROM $dbWorkingtimes
-            WHERE payment_start <= '$dayOfCondition'
-            and payment_end >= DATE_ADD('$dayOfCondition',INTERVAL -11 HOUR)
-        )
-        AND START <= (
-            SELECT payment_end FROM $dbWorkingtimes
-            WHERE payment_start <= '$dayOfCondition'
-            and payment_end >= DATE_ADD('$dayOfCondition',INTERVAL -11 HOUR)
-        );";
-
-        return $this->querySelect($sql);
-    }
-
-    public function getCompleteActivitiesBefore($driverDTCOId, $driverIdx, $dayOfCondition)
-    {
-        $dbActivities = "difa_drivercard_activities.driver_activities_";
-        $dbActivities .= str_pad($driverDTCOId, 8, "0", STR_PAD_LEFT);
-        $dbWorkingtimes = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbWorkingtimes .= str_pad($driverIdx, 8, "0", STR_PAD_LEFT);
-        $sql="SELECT *
-        FROM $dbActivities
-        WHERE START >= (
-            SELECT payment_start FROM $dbWorkingtimes
-            WHERE payment_start <= '$dayOfCondition'
-            and payment_end >= '$dayOfCondition'
-        )
-        AND START <= DATE_ADD('$dayOfCondition',INTERVAL 11 HOUR);";
-
-        return $this->querySelect($sql);
-    }
-
-    public function getCompleteActivitiesAfter($driverDTCOId, $driverIdx, $dayOfCondition)
-    {
-        $dbActivities = "difa_drivercard_activities.driver_activities_";
-        $dbActivities .= str_pad($driverDTCOId, 8, "0", STR_PAD_LEFT);
-        $dbWorkingtimes = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbWorkingtimes .= str_pad($driverIdx, 8, "0", STR_PAD_LEFT);
-        $sql="SELECT activities.*
-        FROM $dbActivities activities
-        WHERE (
-            START >= DATE_ADD('$dayOfCondition',INTERVAL 11 HOUR)
-            AND START <= (
-                SELECT payment_end FROM $dbWorkingtimes
-                WHERE payment_start <= '$dayOfCondition'
-                and payment_end >= '$dayOfCondition'
-            )
-        )
-        OR (
-            activity = 0 and daily_counter = 0 and block_counter - 1 = (
-                SELECT block_counter
-                FROM $dbActivities
-                WHERE (START >= DATE_ADD('$dayOfCondition',INTERVAL 11 HOUR)
-                AND START <= (
-                    SELECT payment_end FROM $dbWorkingtimes
-                    WHERE payment_start <= '$dayOfCondition'
-                    and payment_end >= '$dayOfCondition'
-                ))
-                LIMIT 1
-            )
-        );";
-
-        return $this->querySelect($sql);
-    }
-
-    public function getExtraActivities($driverDTCOId, $beginOfDay, $endOfDay)
-    {
-        $dbActivities = "difa_drivercard_activities.driver_activities_";
-        $dbActivities .= str_pad($driverDTCOId, 8, "0", STR_PAD_LEFT);
-
-        $sql="SELECT *
-        FROM $dbActivities 
-        WHERE START >= '$beginOfDay'
-        AND START <= '$endOfDay';";
-
-        return $this->querySelect($sql);
-    }
-
-    public function getExtraActivitiesAfter($driverDTCOId, $blockCounter)
-    {
-        $dbActivities = "difa_drivercard_activities.driver_activities_";
-        $dbActivities .= str_pad($driverDTCOId, 8, "0", STR_PAD_LEFT);
-        $sql="SELECT *
-        FROM $dbActivities 
-        WHERE activity = 0 AND daily_counter = 0 and block_counter = $blockCounter;";
-
-        return $this->querySelect($sql);
-    }
-
-    public function getRestTimeType($driverIdx, $dayOfCondition)
-    {
-        $dbWorkingtimes = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbWorkingtimes .= str_pad($driverIdx, 8, "0", STR_PAD_LEFT);
-        $sql="SELECT rest_time_type FROM $dbWorkingtimes
-            WHERE payment_start <= '$dayOfCondition'
-            and payment_end >= '$dayOfCondition'";
-        return $this->querySelect($sql);
-    }
-
-
-    public function insertNewWorkingTime($driverIdx, $workingTime)
-    {
-        $dbWorkingtimes = "difa_driver_workingtimes.driver_workingtimes_";
-        $dbWorkingtimes .= str_pad($driverIdx, 8, "0", STR_PAD_LEFT);
-
-        $insertTo = "(";
-        $values = "VALUES (";
-        foreach ($workingTime as $key => $value) {
-            $insertTo .= $key.", ";
-            $values .= $value.", ";
-        }
-        $insertTo = substr($insertTo, 0, -2);
-        $values = substr($values, 0, -2);
-        $values .= ");";
-        $insertTo .=") ".$values;
-
-        $sql="INSERT INTO $dbWorkingtimes" .$insertTo;
-
-        //var_dump($sql);
-        return $this->iuLines($sql);
-    }
-   public function getClientControlDepartures($clientId)
-    {
-        $sql = "SELECT * FROM difa_resources.client_departure_control WHERE client_idx = $clientId;";
-
-        return $this->querySelect($sql);
     }
 }
